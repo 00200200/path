@@ -952,6 +952,31 @@ class TestMergeTree:
         self.subdir_a.merge_tree(self.subdir_b, True)
         assert dest_link.islink()
 
+    @pytest.mark.parametrize('alias', [False, True])
+    @pytest.mark.parametrize('dangling', [False, True])
+    def test_self_merge_preserves_source_symlink(self, alias, dangling):
+        source = self.test_dir / 'source'
+        source.mkdir()
+        target = self.test_dir / 'target'
+        if not dangling:
+            target.write_text('original', encoding='utf-8')
+        link = source / 'link'
+        target.symlink(link)
+        destination = source
+        if alias:
+            destination = self.test_dir / 'alias'
+            destination.symlink_to(source, target_is_directory=True)
+
+        with pytest.raises(shutil.SameFileError):
+            source.merge_tree(destination, symlinks=True)
+
+        assert link.islink()
+        assert link.readlink() == target
+        if dangling:
+            assert not target.exists()
+        else:
+            assert target.read_text(encoding='utf-8') == 'original'
+
     def test_with_existing_dst(self):
         self.subdir_b.rmtree()
         self.subdir_a.copytree(self.subdir_b, True)

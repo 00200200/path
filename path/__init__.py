@@ -1643,6 +1643,9 @@ class Path(str):
 
         Pass ``symlinks=True`` to copy symbolic links as links.
 
+        Raise :class:`shutil.SameFileError` if self and dst refer to
+        the same directory, including through a symbolic link.
+
         Accepts a ``copy_function``, similar to copytree.
 
         To avoid overwriting newer files, supply a copy function
@@ -1651,6 +1654,8 @@ class Path(str):
             src.merge_tree(dst, copy_function=only_newer(shutil.copy2))
         """
         dst_path = self._next_class(dst)
+        if dst_path.exists() and self.samefile(dst_path):
+            raise shutil.SameFileError(f'{self!r} and {dst!r} are the same directory')
         dst_path.makedirs_p()
 
         sources = list(self.iterdir())
